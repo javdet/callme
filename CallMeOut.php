@@ -15,6 +15,7 @@ $callami = new CallAMI();
 $tech = $helper->getConfig('tech');
 $authToken = $helper->getConfig('authToken');
 $context = $helper->getConfig('context');
+$intPrefix = $helper->getConfig('intPrefix');
 
 //данные в запросе
 $request = $_REQUEST;
@@ -43,6 +44,7 @@ if(!empty($request)){
         //проверяем авторизацию по токену
         if ($request['auth']['application_token'] === $authToken) {
             $intNum = $helper->getIntNumByUSER_ID($request['data']['USER_ID']);
+            $intNum = $intPrefix.$intNum;
             $helper->writeToLog($intNum,'intnum');
             $CalledNumber = $request['data']['PHONE_NUMBER_INTERNATIONAL'];
             $helper->writeToLog($CalledNumber,'CalledNumber');

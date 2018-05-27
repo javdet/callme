@@ -23,6 +23,8 @@ class Globals {
     public $Dispositions = [];
     //массив extensions - внешние номера, звонки на которые мы отслеживаем
     public $extensions = [];
+    //массив входящих новеров
+    public $ExtNumber = [];
 
     static public function getInstance(){
 		if (null === self::$instance) {

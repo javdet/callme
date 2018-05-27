@@ -18,7 +18,9 @@ use PAMI\Listener\IEventListener;
 use PAMI\Message\Event\EventMessage;
 use PAMI\Message\Event;
 use PAMI\Message\Event\DialBeginEvent;
+use PAMI\Message\Event\DialEvent;
 use PAMI\Message\Event\DialEndEvent;
+use PAMI\Message\Event\NewstateEvent;
 use PAMI\Message\Event\NewchannelEvent;
 use PAMI\Message\Event\VarSetEvent;
 use PAMI\Message\Event\HangupEvent;
@@ -51,7 +53,8 @@ $pamiClient->registerEventListener(
                 
                 //добавляем звонок в массив, для обработки в других ивентах
                 $globalsObj->uniqueids[] = $callUniqueid;
-                
+                //добавляем внешний номерв в массив
+                $globalsObj->ExtNumber[$callUniqueid] = $extNum;
                 //берем Exten из ивента
                 $extention = $event->getExtension();
 
@@ -112,6 +115,57 @@ $pamiClient->registerEventListener(
                 }
         );
 
+//обрабатываем VarSetEvent события, получаем url записи звонка
+$pamiClient->registerEventListener(
+            function (EventMessage $event) use ($helper,$globalsObj) {
+                $callUniqueid = $event->getUniqueID();
+
+               if ($event->getVariableName() == "DIALEDPEERNUMBER") {
+                   $globalsObj->intNums[$callUniqueid] = substr($event->getValue(), 3);
+                   $extNum = $globalsObj->ExtNumber[$callUniqueid];
+                   $helper->writeToLog(array('intNum'=>$globalsObj->intNums[$callUniqueid],
+                                                    'extNum'=>$extNum,
+                                                    'callUniqueid'=>$callUniqueid,
+                                                    'CALL_ID'=>$globalsObj->calls[$callUniqueid]),
+                                                'incoming call ANSWER');
+                        //для всех, кроме отвечающего, скрываем карточку
+                  $helper->hideInputCallExcept($globalsObj->intNums[$callUniqueid], $globalsObj->calls[$callUniqueid]);
+               }
+               if ($event->getVariableName() == "DIALSTATUS") {
+                   switch ($event->getValue()) {
+                        case 'BUSY':
+                            $helper->writeToLog(array('intNum'=>$globalsObj->intNums[$callUniqueid],
+                                                    'extNum'=>$extNum,
+                                                    'callUniqueid'=>$callUniqueid,
+                                                    'CALL_ID'=>$globalsObj->calls[$callUniqueid]),
+                                                'incoming call BUSY');
+                            //скрываем карточку для юзера
+                            $helper->hideInputCall("111", $globalsObj->calls[$callUniqueid]);
+                            break;
+                        case 'CANCEL':
+                            $helper->writeToLog(array('intNum'=>$globalsObj->intNums[$callUniqueid],
+                                                    'extNum'=>$extNum,
+                                                    'callUniqueid'=>$callUniqueid,
+                                                    'CALL_ID'=>$globalsObj->calls[$callUniqueid]),
+                                                'incoming call BUSY');
+                            //скрываем карточку для юзера
+                            $helper->hideInputCall("111", $globalsObj->calls[$callUniqueid]);
+                            break;
+                        default:
+                            break;
+                   }
+               }
+            },function (EventMessage $event) use ($globalsObj) {
+                    return
+                        $event instanceof VarSetEvent
+                        //проверяем что это именно нужная нам переменная 
+                        && ($event->getVariableName() === 'DIALEDPEERNUMBER' 
+                        || $event->getVariableName()  === 'DIALSTATUS')
+                        //проверяем на вхождение в массив
+                        && in_array($event->getUniqueID(), $globalsObj->uniqueids);
+                }
+        );
+
 //обрабатываем DialBeginEvent события
 $pamiClient->registerEventListener(
             function (EventMessage $event) use ($helper,$globalsObj) {
@@ -136,6 +190,38 @@ $pamiClient->registerEventListener(
                     //для фильтра по uniqueid
                     return
                         $event instanceof DialBeginEvent
+                        //проверяем входит ли событие в массив с uniqueid внешних звоноков
+                        && in_array($event->getUniqueid(), $globalsObj->uniqueids);
+                }
+        );
+
+//обрабатываем DialEvent события
+$pamiClient->registerEventListener(
+            function (EventMessage $event) use ($helper,$globalsObj) {
+                //выгребаем параметры звонка
+                $callUniqueid = $event->getUniqueid();
+                $intNum = substr($event->getDestination(), 7, 3);
+                $extNum = $event->getCallerIDNum();
+                $CallChannel = $event->getChannel();
+
+                //регистриуем звонок в битриксе если callid еще нет
+                if (!isset($globalsObj->calls[$callUniqueid])) {
+            	    $globalsObj->calls[$callUniqueid] = $helper->runInputCall($intNum,$extNum);
+                    $globalsObj->DestUniqueID[$callUniqueid] = $event->getDestUniqueID();
+                
+            	    //показываем карточку пользователю
+            	    $helper->showInputCall($intNum, $globalsObj->calls[$callUniqueid]);
+
+            	    $helper->writeToLog(array('intNum'=>$intNum,
+                                            'extNum'=>$extNum,
+                                            'callUniqueid'=>$callUniqueid,
+                                            'CALL_ID'=>$globalsObj->calls[$callUniqueid]),
+                                        'New incoming call');
+		}
+            },function (EventMessage $event) use ($globalsObj) {
+                    //для фильтра по uniqueid
+                    return
+                        $event instanceof DialEvent
                         //проверяем входит ли событие в массив с uniqueid внешних звоноков
                         && in_array($event->getUniqueid(), $globalsObj->uniqueids);
                 }
@@ -224,6 +310,7 @@ $pamiClient->registerEventListener(
                 $helper->removeItemFromArray($globalsObj->Durations,$callUniqueid,'key');
                 $helper->removeItemFromArray($globalsObj->Dispositions,$callUniqueid,'key');
                 $helper->removeItemFromArray($globalsObj->calls,$callUniqueid,'key');
+                $helper->removeItemFromArray($globalsObj->ExtNumber,$callUniqueid,'key');
 
             },function (EventMessage $event) use ($globalsObj) {
                     return
