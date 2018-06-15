@@ -175,9 +175,12 @@ $pamiClient->registerEventListener(
                 $extNum = $event->getCallerIDNum();
                 $CallChannel = $event->getChannel();
 
-                //регистриуем звонок в битриксе
-                $globalsObj->calls[$callUniqueid] = $helper->runInputCall($intNum,$extNum);
-                
+		if($callByCRM = $helper->getIntNumberByCRM($extNum)){
+                        $globalsObj->calls[$callUniqueid] = $helper->runInputCallByCRM($callByCRM['intNum'],$extNum,$callByCRM['entityType'],$callByCRM['entityID']);
+                }else{
+                        //регистриуем звонок в битриксе
+                        $globalsObj->calls[$callUniqueid] = $helper->runInputCall($intNum,$extNum);
+                }
                 //показываем карточку пользователю
                 $helper->showInputCall($intNum, $globalsObj->calls[$callUniqueid]);
 
@@ -206,7 +209,12 @@ $pamiClient->registerEventListener(
 
                 //регистриуем звонок в битриксе если callid еще нет
                 if (!isset($globalsObj->calls[$callUniqueid])) {
-            	    $globalsObj->calls[$callUniqueid] = $helper->runInputCall($intNum,$extNum);
+		    if($callByCRM = $helper->getIntNumberByCRM($extNum)){
+                        $globalsObj->calls[$callUniqueid] = $helper->runInputCallByCRM($callByCRM['intNum'],$extNum,$callByCRM['entityType'],$callByCRM['entityID']);
+            	    }else{
+                        //регистриуем звонок в битриксе
+                        $globalsObj->calls[$callUniqueid] = $helper->runInputCall($intNum,$extNum);
+            	    }
                     $globalsObj->DestUniqueID[$callUniqueid] = $event->getDestUniqueID();
                 
             	    //показываем карточку пользователю

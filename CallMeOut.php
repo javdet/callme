@@ -36,6 +36,15 @@ if(!empty($request)){
                 //логируем, что нам рассказал битрикс в ответ на наш реквест
                 $helper->writeToLog($resultFromB24,'sendcall2b24 upload call status');
             break;
+	    case 'sendoutcall2b24': //отправляем инфу об исходящем инициираванным с софтфона
+        	$helper->writeToLog($request,'sendoutcall2b24 action');
+		if (is_null($request['CallIntNum']) || is_null($request['CalledNumber']) ){
+                    $helper->writeToLog($resultFromB24,'sendoutcall2b24 error in params');
+                    exit('error in params');
+                }
+		$helper->runOutputCall($request['CalledNumber'], $request['CallIntNum']);
+		$helper->writeToLog($resultFromB24,'sendoutcall2b24 upload call status');
+	    break;
             default:
                 $helper->writeToLog($request['event'],'Go fuck yourself');
                 break;

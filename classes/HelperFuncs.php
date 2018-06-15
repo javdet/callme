@@ -122,6 +122,102 @@ class HelperFuncs {
 	    }
     
 	}
+	
+	public function runOutputCall($exten,$callerid){ 
+            $result = $this->getBitrixApi(array(
+                        'USER_PHONE_INNER' => $callerid,
+                        //'USER_ID' => $argv[1],        
+                        'PHONE_NUMBER' => $exten,
+                        'TYPE' => 1,
+                        'CALL_START_DATE' => date("Y-m-d H:i:s"),
+                        'CRM_CREATE' => 1,
+                        'SHOW' => 1,
+                        ), 'telephony.externalcall.register');
+            $this->writeToLog($result, 'runOutputCall result');
+            if ($result){
+                return $result['result']['CALL_ID'];
+            } else {
+                return false;
+            }
+        }
+
+	public function runInputCallByCRM($exten,$callerid,$entityType,$entityID){ 
+	    $result = $this->getBitrixApi(array(
+			'USER_PHONE_INNER' => $exten,
+			//'USER_ID' => $argv[1],	
+			'PHONE_NUMBER' => $callerid,
+			'TYPE' => 2,
+			'CALL_START_DATE' => date("Y-m-d H:i:s"),
+			'CRM_CREATE' => 1,
+			'SHOW' => 0,
+			'CRM_ENTITY_TYPE' => $entityType,
+			'CRM_ENTITY_ID' => $entityID
+			), 'telephony.externalcall.register');
+	    $this->writeToLog($result, 'runInputCall result crm');
+	    if ($result){
+	        return $result['result']['CALL_ID'];
+	    } else {
+	        return false;
+	    }
+    
+	}
+	
+	public function getIntNumberByCRM($callerid){ 
+	
+	    $result = $this->getBitrixApi(array(
+			'type' => "phone",	
+			'values' => array($callerid)
+			), 'crm.duplicate.findbycomm');
+			
+	    $this->writeToLog($result, 'duplicate findbyphone');
+		
+		if(!empty($result['result']['LEAD'][0])){
+			$res = $this->getBitrixApi(array(
+			'id' => $result['result']['LEAD'][0]
+			), 'crm.lead.get');
+			if(!empty($res['result']['id'])){
+				$crm = $res;
+				$crm['type'] = "LEAD";
+			}
+		}elseif(!empty($result['result']['CONTACT'][0])){
+			$res = $this->getBitrixApi(array(
+			'id' => $result['result']['CONTACT'][0]
+			), 'crm.contact.get');
+			if(!empty($res['result']['id'])){
+				$crm = $res;
+				$crm['type'] = "CONTACT";
+			}
+		}elseif(!empty($result['result']['COMPANY'][0])){
+			$res = $this->getBitrixApi(array(
+			'id' => $result['result']['COMPANY'][0]
+			), 'crm.company.get');
+			if(!empty($res['result']['id'])){
+				$crm = $res;
+				$crm['type'] = "COMPANY";
+			}
+		}else{
+	        return false;
+	    }
+		if(!empty($result['result'])){
+			if(!empty($crm['result']['id']) && !empty($crm['result']['ASSIGNED_BY_ID'])){
+				$user_id = $crm['result']['ASSIGNED_BY_ID'];
+				$entity_id = $crm['result']['id'];
+				$entity_type = $crm['type'];
+			}
+			
+			if(!empty($user_id)){
+				$intNum = $this->getIntNumByUSER_ID($user_id);
+			}
+			
+			if(!empty($intNum)){
+				return array("intNum" => $intNum, "entityType" => $entity_type, "entityID" => $entity_id);
+			}else{
+				return false;
+			}
+		}else{
+	        return false;
+	    }
+	}
 
 	/**
 	 * Run Bitrix24 REST API method user.get.json return only online users array
