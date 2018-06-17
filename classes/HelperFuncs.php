@@ -131,7 +131,7 @@ class HelperFuncs {
                         'TYPE' => 1,
                         'CALL_START_DATE' => date("Y-m-d H:i:s"),
                         'CRM_CREATE' => 1,
-                        'SHOW' => 1,
+                        'SHOW' => 0,
                         ), 'telephony.externalcall.register');
             $this->writeToLog($result, 'runOutputCall result');
             if ($result){

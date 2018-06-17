@@ -32,6 +32,13 @@ if(!empty($request)){
                     $helper->writeToLog($resultFromB24,'sendcall2b24 error in params');
                     exit('error in params');
                 }
+		if (empty($request['call_id'])) {
+		    $call_file = "tmp/".$request['CallIntNum'];
+		    $f_call = fopen($call_file, "r");
+		    $request['call_id'] = fgets($f_call);
+		    fclose($f_call);
+		    $helper->writeToLog($request['call_id'],'sendcall2b24 set call_id');
+		}
                 $resultFromB24 = $helper->uploadRecordedFile($request['call_id'],$request['FullFname'],$request['CallIntNum'],$request['CallDuration'],$request['CallDisposition']); 
                 //логируем, что нам рассказал битрикс в ответ на наш реквест
                 $helper->writeToLog($resultFromB24,'sendcall2b24 upload call status');
@@ -39,11 +46,30 @@ if(!empty($request)){
 	    case 'sendoutcall2b24': //отправляем инфу об исходящем инициираванным с софтфона
         	$helper->writeToLog($request,'sendoutcall2b24 action');
 		if (is_null($request['CallIntNum']) || is_null($request['CalledNumber']) ){
-                    $helper->writeToLog($resultFromB24,'sendoutcall2b24 error in params');
+                    $helper->writeToLog('is_null', 'sendoutcall2b24 error in params');
                     exit('error in params');
                 }
-		$helper->runOutputCall($request['CalledNumber'], $request['CallIntNum']);
+		$call_id = $helper->runOutputCall($request['CalledNumber'], $request['CallIntNum']);
+		$call_file = "tmp/".$request['CallIntNum'];
+		$f_call = fopen($call_file, "w");
+		fwrite($f_call, $call_id);
+		fclose($f_call);
+		$helper->showInputCall($request['CallIntNum'], $call_id);
 		$helper->writeToLog($resultFromB24,'sendoutcall2b24 upload call status');
+	    break;
+	    case 'sendoutfinish2b24': //отправляем инфу об завершенном исходящем инициираванным с софтфона
+        	$helper->writeToLog($request,'sendoutfinish2b24 action');
+		if (is_null($request['CallIntNum']) || is_null($request['FullFname']) || is_null($request['CallDuration']) || is_null($request['CallDisposition'])){
+                    $helper->writeToLog('is_null', 'sendoutfinish2b24 error in params');
+                    exit('error in params');
+                }
+		$call_file = "tmp/".$request['CallIntNum'];
+		$f_call = fopen($call_file, "r");
+		$call_id = fgets($f_call);
+		fclose($f_call);
+		$helper->writeToLog($call_id,'sendoutfinish2b24 set call_id');
+		$resultFromB24 = $helper->uploadRecordedFile($call_id, $request['FullFname'], $request['CallIntNum'], $request['CallDuration'], $request['CallDisposition']);
+		$helper->writeToLog($resultFromB24,'sendoutfinish2b24 call finish');
 	    break;
             default:
                 $helper->writeToLog($request['event'],'Go fuck yourself');
