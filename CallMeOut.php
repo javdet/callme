@@ -32,6 +32,7 @@ if(!empty($request)){
                     $helper->writeToLog($resultFromB24,'sendcall2b24 error in params');
                     exit('error in params');
                 }
+		// Если звонок с софтфона
 		if (empty($request['call_id'])) {
 		    $call_file = "tmp/".$request['CallIntNum'];
 		    $f_call = fopen($call_file, "r");
@@ -39,9 +40,19 @@ if(!empty($request)){
 		    fclose($f_call);
 		    $helper->writeToLog($request['call_id'],'sendcall2b24 set call_id');
 		}
+		// Если входящий звонок
+		if (strlen($request['call_id']) < 20) {
+		    $call_file = "tmp/in_".$request['CallIntNum'];
+		    $f_call = fopen($call_file, "r");
+		    $request['call_id'] = fgets($f_call);
+		    fclose($f_call);
+		    $helper->writeToLog($request['call_id'],'sendcall2b24 set in call_id');
+		}
                 $resultFromB24 = $helper->uploadRecordedFile($request['call_id'],$request['FullFname'],$request['CallIntNum'],$request['CallDuration'],$request['CallDisposition']); 
                 //логируем, что нам рассказал битрикс в ответ на наш реквест
                 $helper->writeToLog($resultFromB24,'sendcall2b24 upload call status');
+		//$resultFromB24 = $helper->attachRecordedFile($request['call_id'],$request['FullFname']);
+		//$helper->writeToLog($resultFromB24,'sendcall2b24 attach file');
             break;
 	    case 'sendoutcall2b24': //отправляем инфу об исходящем инициираванным с софтфона
         	$helper->writeToLog($request,'sendoutcall2b24 action');

@@ -130,6 +130,10 @@ $pamiClient->registerEventListener(
                                                 'incoming call ANSWER');
                         //для всех, кроме отвечающего, скрываем карточку
                   $helper->hideInputCallExcept($globalsObj->intNums[$callUniqueid], $globalsObj->calls[$callUniqueid]);
+		  $call_file = "tmp/in_".$globalsObj->intNums[$callUniqueid];
+		  $f_call = fopen($call_file, "w");
+		  fwrite($f_call, $globalsObj->calls[$callUniqueid]);
+		  fclose($f_call);
                }
                if ($event->getVariableName() == "DIALSTATUS") {
                    switch ($event->getValue()) {
@@ -307,7 +311,7 @@ $pamiClient->registerEventListener(
                           'Disposition'=>$CallDisposition),
                     'New HangupEvent First step - recording filename URL, intNum, Duration, Disposition');
 
-                $resultFromB24 = $helper->uploadRecordedFile($call_id,$FullFname,$CallIntNum,$CallDuration,$CallDisposition); 
+                //$resultFromB24 = $helper->uploadRecordedFile($call_id,$FullFname,$CallIntNum,$CallDuration,$CallDisposition); 
                 //логируем, что нам рассказал битрикс в ответ на наш реквест
                 $helper->writeToLog($resultFromB24,'New HangupEvent Second Step - upload filename');
 

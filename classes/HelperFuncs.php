@@ -84,6 +84,23 @@ class HelperFuncs {
 	    }
     
 	}
+	public function attachRecordedFile($call_id,$recordedfile){
+	    $values = parse_url($recordedfile);
+	    $paths = explode('/',$values['path']);
+	    $filename = $paths[count($paths)-1];
+	    $result = $this->getBitrixApi(array(
+			    	'USER_PHONE_INNER' => $intNum,
+					'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+					'FILENAME' => $filename,
+					'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+					), 'telephony.externalCall.attachRecord');
+	    if ($result){
+	        return $result;
+	    } else {
+	        return false;
+	    }
+    
+	}
 
 	/**
 	 * Run Bitrix24 REST API method telephony.externalcall.register.json  
